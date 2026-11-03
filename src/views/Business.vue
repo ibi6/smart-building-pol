@@ -59,7 +59,7 @@ const sampleOnus = computed(() =>
 </script>
 
 <template>
-  <div class="biz">
+  <div class="biz page-motion">
     <section class="top">
       <div v-for="(s, i) in slices" :key="s.name" class="pol-panel card">
         <div class="card-top">
@@ -128,4 +128,15 @@ const sampleOnus = computed(() =>
 @media (max-width: 800px) {
   .top, .mid { grid-template-columns: 1fr; }
 }
+
+.page-motion > .pol-panel,
+.page-motion > section,
+.page-motion > .charts,
+.page-motion > .body,
+.page-motion > .top,
+.page-motion > .mid {
+  animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-motion > *:nth-child(2) { animation-delay: 0.08s; }
+.page-motion > *:nth-child(3) { animation-delay: 0.16s; }
 </style>

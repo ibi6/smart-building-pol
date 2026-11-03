@@ -41,7 +41,7 @@ const severityType = (s: AlarmSeverity) => {
 </script>
 
 <template>
-  <div class="alarms">
+  <div class="alarms page-motion">
     <div class="pol-panel toolbar">
       <el-select v-model="severity" style="width: 140px" size="small">
         <el-option label="全部级别" value="all" />
@@ -140,4 +140,15 @@ const severityType = (s: AlarmSeverity) => {
 @media (max-width: 1100px) {
   .body { grid-template-columns: 1fr; }
 }
+
+.page-motion > .pol-panel,
+.page-motion > section,
+.page-motion > .charts,
+.page-motion > .body,
+.page-motion > .top,
+.page-motion > .mid {
+  animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-motion > *:nth-child(2) { animation-delay: 0.08s; }
+.page-motion > *:nth-child(3) { animation-delay: 0.16s; }
 </style>

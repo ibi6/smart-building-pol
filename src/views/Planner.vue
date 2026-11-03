@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import {
   generatePlan,
   presets,
@@ -21,8 +21,12 @@ const form = reactive<PlannerInput>({
 
 const result = ref<PlannerResult | null>(null)
 const loading = ref(false)
+const showResults = ref(false)
+const computePhase = ref('')
 
 const bizOptions: BizType[] = ['办公', '访客', '安防', '物联', '无线高密']
+
+const phases = ['解析楼宇约束…', '评估接入密度…', '匹配 PON 制式…', '优化分光与 BOM…', '生成最优方案…']
 
 function applyPreset(id: string) {
   const p = presets.find((x) => x.id === id)
@@ -32,28 +36,39 @@ function applyPreset(id: string) {
     bizTypes: [...p.input.bizTypes],
   })
   result.value = null
+  showResults.value = false
 }
 
-function run() {
+async function run() {
   loading.value = true
-  window.setTimeout(() => {
-    result.value = generatePlan({
-      ...form,
-      bizTypes: [...form.bizTypes],
-    })
-    loading.value = false
-  }, 280)
+  showResults.value = false
+  result.value = null
+  for (const p of phases) {
+    computePhase.value = p
+    await new Promise((r) => setTimeout(r, 220))
+  }
+  result.value = generatePlan({
+    ...form,
+    bizTypes: [...form.bizTypes],
+  })
+  loading.value = false
+  await nextTick()
+  showResults.value = true
 }
+
+const resultBlocks = computed(() => (showResults.value && result.value ? true : false))
 </script>
 
 <template>
   <div class="planner">
     <section class="pol-panel form-panel">
+      <div class="flow-line" style="top: 0" />
       <div class="head">
         <div>
           <h3 class="pol-title">方案测算 · 智能规划</h3>
           <div class="pol-sub">输入楼宇条件，规则引擎输出可解释的最优全光组网方案（无需外部 AI）</div>
         </div>
+        <span class="neon-badge">答辩演示 · 规则引擎</span>
       </div>
 
       <div class="presets">
@@ -63,13 +78,12 @@ function run() {
           :key="p.id"
           size="small"
           round
+          class="preset-btn"
           @click="applyPreset(p.id)"
         >{{ p.name }}</el-button>
       </div>
       <div class="preset-desc pol-sub">
-        <template v-for="p in presets" :key="p.id + '-d'">
-          <span class="chip">{{ p.name }}：{{ p.desc }}</span>
-        </template>
+        <span v-for="p in presets" :key="p.id + '-d'" class="chip">{{ p.name }}：{{ p.desc }}</span>
       </div>
 
       <el-form label-position="top" class="grid-form">
@@ -110,15 +124,31 @@ function run() {
           </el-radio-group>
         </el-form-item>
         <el-form-item class="span-2 actions">
-          <el-button type="primary" size="large" :loading="loading" @click="run">生成最优方案</el-button>
+          <el-button type="primary" size="large" class="gen-btn" :loading="loading" @click="run">
+            生成最优方案
+          </el-button>
           <span class="pol-sub">规则基于密度、带宽档位、业务与预算，输出可答辩讲解的推导过程</span>
         </el-form-item>
       </el-form>
     </section>
 
-    <template v-if="result">
-      <section class="pol-panel result-block">
-        <h3 class="pol-title">推荐架构摘要</h3>
+    <transition name="page-fade">
+      <section v-if="loading" class="pol-panel computing" key="computing">
+        <div class="radar" />
+        <div class="compute-text">
+          <div class="neon-badge">计算中</div>
+          <h3 class="pol-title">{{ computePhase }}</h3>
+          <div class="pol-sub">正在对约束条件做可解释规则匹配…</div>
+        </div>
+      </section>
+    </transition>
+
+    <template v-if="resultBlocks && result">
+      <section class="pol-panel result-block cascade-item" style="--i: 0">
+        <div class="result-head">
+          <h3 class="pol-title">推荐架构摘要</h3>
+          <span class="neon-badge">★ 最优方案</span>
+        </div>
         <p class="summary">{{ result.summary }}</p>
         <div class="tags">
           <el-tag effect="dark" type="success">制式 {{ result.tech }}</el-tag>
@@ -129,7 +159,7 @@ function run() {
       </section>
 
       <section class="mid">
-        <div class="pol-panel result-block">
+        <div class="pol-panel result-block cascade-item" style="--i: 1">
           <h3 class="pol-title">规则推导说明</h3>
           <ul class="reasons">
             <li v-for="(line, i) in result.reasonLines" :key="i">{{ line }}</li>
@@ -140,7 +170,7 @@ function run() {
             <div><span class="pol-sub">有线 ONU / 光 AP</span><strong>{{ result.onuTotal }} / {{ result.apTotal }} 台</strong></div>
           </div>
         </div>
-        <div class="pol-panel result-block">
+        <div class="pol-panel result-block cascade-item" style="--i: 2">
           <h3 class="pol-title">VLAN / 切片划分建议</h3>
           <el-table :data="result.slices" size="small" stripe>
             <el-table-column prop="name" label="切片" width="100" />
@@ -151,7 +181,7 @@ function run() {
         </div>
       </section>
 
-      <section class="pol-panel result-block">
+      <section class="pol-panel result-block cascade-item" style="--i: 3">
         <h3 class="pol-title">关键设备清单</h3>
         <el-table :data="result.bom" stripe>
           <el-table-column prop="name" label="设备" width="140" />
@@ -162,7 +192,7 @@ function run() {
         </el-table>
       </section>
 
-      <section class="pol-panel result-block">
+      <section class="pol-panel result-block cascade-item" style="--i: 4">
         <h3 class="pol-title">按楼层部署建议（ONU / 光 AP）</h3>
         <el-table :data="result.floorPlans" stripe height="360">
           <el-table-column prop="floor" label="楼层" width="80">
@@ -174,7 +204,7 @@ function run() {
         </el-table>
       </section>
 
-      <section class="pol-panel result-block">
+      <section class="pol-panel result-block cascade-item" style="--i: 5">
         <h3 class="pol-title">相对传统三层交换的优势要点</h3>
         <ul class="reasons">
           <li v-for="(line, i) in result.vsTraditional" :key="'v' + i">{{ line }}</li>
@@ -182,17 +212,29 @@ function run() {
       </section>
     </template>
 
-    <section v-else class="pol-panel empty">
-      <div class="pol-sub">填写左侧条件或选择预设场景，点击「生成最优方案」查看 OLT/ODN/ONU 与切片建议。</div>
+    <section v-else-if="!loading" class="pol-panel empty">
+      <div class="pol-sub">填写条件或选择预设场景，点击「生成最优方案」查看 OLT/ODN/ONU 与切片建议。</div>
     </section>
   </div>
 </template>
 
 <style scoped>
 .planner { display: flex; flex-direction: column; gap: 12px; }
-.form-panel, .result-block, .empty { padding: 14px 16px; }
-.head { margin-bottom: 10px; }
+.form-panel, .result-block, .empty, .computing { padding: 14px 16px; }
+.head {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
 .presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.preset-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.preset-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(58, 160, 255, 0.35);
+}
 .preset-desc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .chip {
   border: 1px solid rgba(64, 158, 255, 0.25);
@@ -207,6 +249,45 @@ function run() {
 }
 .span-2 { grid-column: span 2; }
 .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.gen-btn {
+  box-shadow: 0 0 18px rgba(58, 160, 255, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.gen-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 26px rgba(25, 230, 194, 0.4);
+}
+.computing {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 120px;
+  border-color: rgba(80, 210, 255, 0.55) !important;
+}
+.radar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(58, 160, 255, 0.45);
+  background:
+    conic-gradient(from 0deg, transparent 0 70%, rgba(25, 230, 194, 0.55) 0 100%),
+    radial-gradient(circle, rgba(58, 160, 255, 0.2), transparent 65%);
+  animation: spin-radar 1.1s linear infinite;
+  box-shadow: 0 0 24px rgba(58, 160, 255, 0.4);
+  flex-shrink: 0;
+}
+@keyframes spin-radar {
+  to { transform: rotate(360deg); }
+}
+.compute-text { display: flex; flex-direction: column; gap: 8px; }
+.result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
 .summary { line-height: 1.7; margin: 8px 0 12px; color: var(--pol-text); }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .mid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; }
@@ -214,6 +295,10 @@ function run() {
 .kv { display: grid; gap: 10px; margin-top: 14px; }
 .kv strong { display: block; margin-top: 2px; }
 .empty { min-height: 80px; display: grid; place-items: center; }
+.cascade-item {
+  animation: card-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.1s);
+}
 @media (max-width: 1100px) {
   .grid-form, .mid { grid-template-columns: 1fr; }
   .span-2 { grid-column: span 1; }

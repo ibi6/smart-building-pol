@@ -46,6 +46,7 @@
 - ECharts / vue-echarts（拓扑、趋势、热力）
 - Vue Router（Hash 模式，适配 GitHub Pages）
 - 纯前端 Mock，无后端依赖
+- 深色网管大屏视觉：玻璃拟态、霓虹描边、KPI 数字滚动与路由入场动效
 
 ## 本地启动
 

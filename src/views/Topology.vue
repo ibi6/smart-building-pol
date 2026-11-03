@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { GraphChart } from 'echarts/charts'
@@ -11,6 +11,14 @@ import type { DeviceStatus } from '@/types'
 use([CanvasRenderer, GraphChart, TooltipComponent, LegendComponent])
 
 const selected = ref<Record<string, unknown> | null>(null)
+const selectedId = ref<string | null>(null)
+const booting = ref(true)
+
+onMounted(() => {
+  window.setTimeout(() => {
+    booting.value = false
+  }, 650)
+})
 
 const statusColor: Record<DeviceStatus, string> = {
   online: '#2ce6a4',
@@ -23,15 +31,28 @@ const graphOption = computed(() => {
   const nodes: Array<Record<string, unknown>> = []
   const links: Array<Record<string, unknown>> = []
 
+  const glow = (color: string, size: number, id: string) => {
+    const hot = selectedId.value === id
+    return {
+      symbolSize: hot ? size * 1.35 : size,
+      itemStyle: {
+        color,
+        shadowBlur: hot ? 28 : 14,
+        shadowColor: color,
+        borderColor: hot ? '#fff' : 'rgba(255,255,255,0.25)',
+        borderWidth: hot ? 2 : 1,
+      },
+    }
+  }
+
   nodes.push({
     id: 'CORE',
     name: '楼宇核心交换机',
     category: 0,
-    symbolSize: 46,
     x: 0,
     y: 0,
     fixed: true,
-    itemStyle: { color: '#19e6c2' },
+    ...glow('#19e6c2', 46, 'CORE'),
     detail: { type: 'CORE', desc: '上联园区核心 / 互联网出口' },
   })
 
@@ -40,39 +61,63 @@ const graphOption = computed(() => {
       id: o.id,
       name: o.name,
       category: 1,
-      symbolSize: 40,
       x: i === 0 ? -180 : 180,
       y: 100,
       fixed: true,
-      itemStyle: { color: statusColor[o.status] },
+      ...glow(statusColor[o.status], 40, o.id),
       detail: o,
     })
-    links.push({ source: 'CORE', target: o.id, lineStyle: { color: 'rgba(25,230,194,0.55)', width: 2 } })
+    links.push({
+      source: 'CORE',
+      target: o.id,
+      lineStyle: {
+        color: 'rgba(25,230,194,0.7)',
+        width: 2.2,
+        shadowBlur: 8,
+        shadowColor: 'rgba(25,230,194,0.55)',
+        curveness: 0.05,
+      },
+    })
   })
 
-  // dual-home visual link
   links.push({
     source: 'OLT-01',
     target: 'OLT-02',
-    lineStyle: { type: 'dashed', color: 'rgba(255,176,32,0.7)', width: 1.5 },
+    lineStyle: {
+      type: 'dashed',
+      color: 'rgba(255,176,32,0.85)',
+      width: 1.8,
+      shadowBlur: 6,
+      shadowColor: 'rgba(255,176,32,0.5)',
+      curveness: -0.2,
+    },
     label: { show: true, formatter: '双归属保护', color: '#ffb020', fontSize: 10 },
   })
 
   const l1 = odns.filter((d) => d.level === 1)
   l1.forEach((d, i) => {
-    const x = -420 + (i * 170)
+    const x = -420 + i * 170
     nodes.push({
       id: d.id,
       name: d.name,
       category: 2,
-      symbolSize: 28,
       x,
       y: 230,
       fixed: true,
-      itemStyle: { color: statusColor[d.status] },
+      ...glow(statusColor[d.status], 28, d.id),
       detail: d,
     })
-    links.push({ source: d.parentId, target: d.id, lineStyle: { color: 'rgba(58,160,255,0.45)' } })
+    links.push({
+      source: d.parentId,
+      target: d.id,
+      lineStyle: {
+        color: 'rgba(58,160,255,0.55)',
+        width: 1.6,
+        shadowBlur: 5,
+        shadowColor: 'rgba(58,160,255,0.4)',
+        curveness: 0.08,
+      },
+    })
   })
 
   const l2 = odns.filter((d) => d.level === 2)
@@ -82,17 +127,23 @@ const graphOption = computed(() => {
       id: d.id,
       name: d.name,
       category: 3,
-      symbolSize: 22,
       x,
       y: 360,
       fixed: true,
-      itemStyle: { color: statusColor[d.status] },
+      ...glow(statusColor[d.status], 22, d.id),
       detail: d,
     })
-    links.push({ source: d.parentId, target: d.id, lineStyle: { color: 'rgba(58,160,255,0.35)' } })
+    links.push({
+      source: d.parentId,
+      target: d.id,
+      lineStyle: {
+        color: 'rgba(58,160,255,0.4)',
+        width: 1.3,
+        curveness: 0.06,
+      },
+    })
   })
 
-  // sample ONU nodes under each L2 (limit for readability)
   const sampleOnus = onus.filter((_, idx) => idx % 2 === 0).slice(0, 36)
   sampleOnus.forEach((o, i) => {
     const parent = o.parentOdnId
@@ -104,18 +155,23 @@ const graphOption = computed(() => {
       id: o.id,
       name: o.name,
       category: 4,
-      symbolSize: o.type === 'AP' ? 16 : 14,
       x: baseX - 30 + si * 28,
       y: 480 + (i % 3) * 18,
       fixed: true,
-      itemStyle: { color: statusColor[o.status] },
+      ...glow(statusColor[o.status], o.type === 'AP' ? 16 : 14, o.id),
       detail: o,
     })
-    links.push({ source: parent, target: o.id, lineStyle: { color: 'rgba(143,163,194,0.35)', width: 1 } })
+    links.push({
+      source: parent,
+      target: o.id,
+      lineStyle: { color: 'rgba(143,163,194,0.4)', width: 1, curveness: 0.04 },
+    })
   })
 
   return {
     backgroundColor: 'transparent',
+    animationDuration: 1400,
+    animationEasingUpdate: 'cubicOut' as const,
     tooltip: {
       formatter: (p: { data?: { name?: string; detail?: Record<string, unknown> } }) => {
         const d = p.data?.detail
@@ -160,18 +216,25 @@ const graphOption = computed(() => {
           formatter: (p: { data: { category: number; name: string } }) =>
             p.data.category >= 4 ? '' : p.data.name.replace(/弱电间-|走廊-/g, ''),
         },
-        lineStyle: { curveness: 0.08 },
+        edgeSymbol: ['none', 'arrow'],
+        edgeSymbolSize: [0, 6],
+        lineStyle: { curveness: 0.08, opacity: 0.85 },
         data: nodes,
         links,
-        emphasis: { focus: 'adjacency' },
+        emphasis: {
+          focus: 'adjacency',
+          lineStyle: { width: 3, opacity: 1, shadowBlur: 10, shadowColor: 'rgba(58,160,255,0.7)' },
+          itemStyle: { shadowBlur: 30 },
+        },
       },
     ],
   }
 })
 
 function onClick(params: Record<string, unknown>) {
-  const data = params.data as { detail?: Record<string, unknown>; name?: string } | undefined
+  const data = params.data as { id?: string; detail?: Record<string, unknown>; name?: string } | undefined
   if (params.dataType === 'node' && data?.detail) {
+    selectedId.value = data.id || null
     selected.value = { name: data.name, ...data.detail }
   }
 }
@@ -180,18 +243,28 @@ function onClick(params: Record<string, unknown>) {
 <template>
   <div class="topo">
     <div class="pol-panel canvas-wrap">
+      <div class="flow-line" style="top: 0" />
       <div class="head">
         <div>
           <h3 class="pol-title">OLT → ODN（多级分光）→ ONU / 光网 AP</h3>
           <div class="pol-sub">二级分光架构示意 · 可拖拽缩放 · 点击节点查看详情（演示采样 ONU）</div>
         </div>
-        <el-tag effect="plain">GPON / XGS-PON Combo</el-tag>
+        <el-tag effect="plain" class="tech-tag">GPON / XGS-PON Combo</el-tag>
       </div>
-      <v-chart class="chart" :option="graphOption" autoresize @click="onClick" />
+      <div class="chart-box">
+        <transition name="page-fade">
+          <div v-if="booting" class="skeleton" key="sk">
+            <div class="sk-pulse" />
+            <div class="pol-sub">拓扑光路展开中…</div>
+          </div>
+          <v-chart v-else class="chart" :option="graphOption" autoresize @click="onClick" />
+        </transition>
+      </div>
     </div>
-    <aside class="pol-panel detail">
+    <aside class="pol-panel detail" :class="{ pulse: !!selected }">
       <h3 class="pol-title">节点详情</h3>
       <template v-if="selected">
+        <div class="neon-badge" style="margin-bottom: 10px; width: fit-content">已选中 · 光路聚焦</div>
         <el-descriptions :column="1" size="small" border class="desc">
           <el-descriptions-item v-for="(v, k) in selected" :key="String(k)" :label="String(k)">
             {{ Array.isArray(v) ? v.join('、') : v }}
@@ -201,10 +274,10 @@ function onClick(params: Record<string, unknown>) {
       <div v-else class="pol-sub empty">点击拓扑中的节点查看型号、分光比、光功率等信息</div>
       <div class="legend-box">
         <div class="pol-title" style="margin-bottom: 8px">图例</div>
-        <div><span class="status-dot status-online" />在线</div>
+        <div><span class="status-dot status-online" />在线（节点发光）</div>
         <div><span class="status-dot status-warning" />告警</div>
         <div><span class="status-dot status-offline" />离线</div>
-        <div class="pol-sub" style="margin-top: 10px">虚线：OLT 双归属保护关系</div>
+        <div class="pol-sub" style="margin-top: 10px">虚线：OLT 双归属 · 选中节点脉冲高亮</div>
       </div>
     </aside>
   </div>
@@ -219,8 +292,40 @@ function onClick(params: Record<string, unknown>) {
 }
 .canvas-wrap, .detail { padding: 14px 16px; }
 .head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.tech-tag {
+  border-color: rgba(58,160,255,0.45) !important;
+  box-shadow: 0 0 12px rgba(58,160,255,0.25);
+}
+.chart-box { position: relative; min-height: 620px; }
 .chart { height: 620px; width: 100%; }
-.detail { display: flex; flex-direction: column; gap: 12px; }
+.skeleton {
+  height: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(58,160,255,0.12), transparent 45%),
+    linear-gradient(180deg, rgba(10,20,40,0.4), transparent);
+}
+.sk-pulse {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(58,160,255,0.55);
+  box-shadow: 0 0 24px rgba(58,160,255,0.45), inset 0 0 20px rgba(25,230,194,0.25);
+  animation: topo-boot 1s ease-in-out infinite;
+}
+@keyframes topo-boot {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+.detail { display: flex; flex-direction: column; gap: 12px; transition: box-shadow 0.3s ease; }
+.detail.pulse {
+  box-shadow: 0 0 28px rgba(58, 160, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+  border-color: rgba(80, 210, 255, 0.55);
+}
 .empty { margin-top: 16px; }
 .legend-box {
   margin-top: auto;
@@ -234,5 +339,6 @@ function onClick(params: Record<string, unknown>) {
 .desc { --el-fill-color-blank: transparent; }
 @media (max-width: 1100px) {
   .topo { grid-template-columns: 1fr; }
+  .chart-box, .chart, .skeleton { height: 480px; min-height: 480px; }
 }
 </style>

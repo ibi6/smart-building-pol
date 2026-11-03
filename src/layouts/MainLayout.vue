@@ -27,6 +27,7 @@ const menus = [
 
 const active = computed(() => route.path)
 const pageTitle = computed(() => (route.meta.title as string) || '智能楼宇全光网架')
+const alarmPending = computed(() => overviewStats.alarmCritical + overviewStats.alarmMajor)
 
 function go(path: string) {
   router.push(path)
@@ -51,8 +52,9 @@ function go(path: string) {
           :class="{ active: active === m.path }"
           @click="go(m.path)"
         >
-          <el-icon :size="18"><component :is="m.icon" /></el-icon>
+          <span class="menu-icon"><el-icon :size="18"><component :is="m.icon" /></el-icon></span>
           <span>{{ m.title }}</span>
+          <span v-if="active === m.path" class="active-bar" />
         </button>
       </nav>
       <div class="sider-foot pol-sub">
@@ -63,20 +65,35 @@ function go(path: string) {
 
     <div class="main">
       <header class="topbar pol-panel">
+        <div class="flow-line" style="top: 0" />
         <div>
           <h1 class="pol-title">{{ pageTitle }}</h1>
           <div class="pol-sub">面向高密度接入的智能楼宇全光网架 · {{ building.address }}</div>
         </div>
         <div class="top-meta">
+          <div class="live-pill">
+            <span class="live-dot" />
+            链路监测中
+          </div>
           <el-tag type="success" effect="dark" round>系统正常</el-tag>
-          <el-badge :value="overviewStats.alarmCritical + overviewStats.alarmMajor" :hidden="overviewStats.alarmCritical + overviewStats.alarmMajor === 0">
-            <el-button size="small" @click="go('/alarms')">未确认告警</el-button>
+          <el-badge :value="alarmPending" :hidden="alarmPending === 0">
+            <el-button
+              size="small"
+              :class="{ 'alarm-blink': alarmPending > 0 }"
+              @click="go('/alarms')"
+            >未确认告警</el-button>
           </el-badge>
-          <span class="pol-sub">UTC+8 演示时钟</span>
+          <span class="pol-sub">Asia/Shanghai · UTC+8</span>
         </div>
       </header>
       <main class="content">
-        <router-view />
+        <router-view v-slot="{ Component, route: r }">
+          <transition name="page-fade" mode="out-in">
+            <div :key="r.path" class="page-wrap">
+              <component :is="Component" />
+            </div>
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
@@ -85,7 +102,7 @@ function go(path: string) {
 <style scoped>
 .layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 248px 1fr;
   gap: 14px;
   min-height: 100vh;
   padding: 14px;
@@ -107,19 +124,26 @@ function go(path: string) {
   margin-bottom: 12px;
 }
 .logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   background: linear-gradient(135deg, #3aa0ff, #19e6c2);
   color: #041018;
+  box-shadow: 0 0 22px rgba(58, 160, 255, 0.45);
+  animation: logo-pulse 3s ease-in-out infinite;
+}
+@keyframes logo-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(58, 160, 255, 0.35); }
+  50% { box-shadow: 0 0 28px rgba(25, 230, 194, 0.55); }
 }
 .brand-title { font-weight: 700; font-size: 15px; }
 .menu { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .menu-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -130,17 +154,36 @@ function go(path: string) {
   padding: 11px 12px;
   cursor: pointer;
   text-align: left;
-  transition: 0.2s ease;
+  transition: 0.22s ease;
+  overflow: hidden;
+}
+.menu-icon {
+  display: grid;
+  place-items: center;
+  transition: transform 0.22s ease;
 }
 .menu-item:hover {
   color: var(--pol-text);
-  background: rgba(58, 160, 255, 0.08);
+  background: rgba(58, 160, 255, 0.1);
+  border-color: rgba(58, 160, 255, 0.25);
+  transform: translateX(3px);
 }
+.menu-item:hover .menu-icon { transform: scale(1.08); }
 .menu-item.active {
   color: var(--pol-text);
-  border-color: rgba(58, 160, 255, 0.45);
-  background: linear-gradient(90deg, rgba(58, 160, 255, 0.22), rgba(25, 230, 194, 0.08));
-  box-shadow: inset 0 0 0 1px rgba(58, 160, 255, 0.15);
+  border-color: rgba(58, 160, 255, 0.55);
+  background: linear-gradient(90deg, rgba(58, 160, 255, 0.28), rgba(25, 230, 194, 0.1));
+  box-shadow: inset 0 0 0 1px rgba(58, 160, 255, 0.18), 0 0 18px rgba(58, 160, 255, 0.15);
+}
+.active-bar {
+  position: absolute;
+  right: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(180deg, #3aa0ff, #19e6c2);
+  box-shadow: 0 0 10px rgba(58, 160, 255, 0.8);
 }
 .sider-foot { padding: 12px 8px 4px; border-top: 1px solid rgba(64, 158, 255, 0.15); }
 .main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
@@ -152,11 +195,36 @@ function go(path: string) {
   padding: 14px 18px;
 }
 .top-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.content { min-height: 0; }
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(44, 230, 164, 0.35);
+  background: rgba(44, 230, 164, 0.08);
+  font-size: 12px;
+  color: #b8ffe0;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pol-ok);
+  box-shadow: 0 0 10px var(--pol-ok);
+  animation: live-blink 1.2s ease-in-out infinite;
+}
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.content { min-height: 0; position: relative; }
+.page-wrap { min-width: 0; }
 
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; }
   .sider { position: relative; top: 0; height: auto; }
   .menu { flex-direction: row; flex-wrap: wrap; }
+  .menu-item:hover { transform: none; }
 }
 </style>

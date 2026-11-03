@@ -42,7 +42,7 @@ const statusLabel: Record<DeviceStatus, string> = {
 </script>
 
 <template>
-  <div class="devices">
+  <div class="devices page-motion">
     <div class="pol-panel toolbar">
       <el-radio-group v-model="tab" size="small">
         <el-radio-button value="olt">OLT（{{ olts.length }}）</el-radio-button>
@@ -142,4 +142,15 @@ const statusLabel: Record<DeviceStatus, string> = {
 }
 .filters { display: flex; gap: 8px; }
 .table-wrap { padding: 8px; }
+
+.page-motion > .pol-panel,
+.page-motion > section,
+.page-motion > .charts,
+.page-motion > .body,
+.page-motion > .top,
+.page-motion > .mid {
+  animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-motion > *:nth-child(2) { animation-delay: 0.08s; }
+.page-motion > *:nth-child(3) { animation-delay: 0.16s; }
 </style>
