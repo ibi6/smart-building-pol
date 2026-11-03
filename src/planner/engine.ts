@@ -88,21 +88,21 @@ export function generatePlan(input: PlannerInput): PlannerResult {
   if (input.bandwidthTier === '万兆上行' || density > 80 || hasWirelessDense || input.budget === '性能优先') {
     tech = input.budget === '成本优先' && input.bandwidthTier !== '万兆上行' ? 'Combo' : 'XGS-PON'
     reasonLines.push(
-      `峰值密度约 ${density.toFixed(0)} 用户/层、带宽档位「${input.bandwidthTier}」、业务含「${input.bizTypes.join('、') || '办公'}」→ 推荐 ${tech}，保障高密并发与上行能力。`,
+      `依据：每层峰值约 ${density.toFixed(0)} 用户，带宽档位为「${input.bandwidthTier}」，业务含「${input.bizTypes.join('、') || '办公'}」。结论：采用 ${tech}。`,
     )
   } else if (density > 40 || pointDensity > 24 || input.budget === '均衡') {
     tech = 'Combo'
     reasonLines.push(
-      `中等密度（约 ${density.toFixed(0)} 用户/层、每层 ${pointDensity} 点）→ 推荐 Combo（GPON+XGS-PON），热点楼层可平滑升级。`,
+      `依据：每层约 ${density.toFixed(0)} 用户、${pointDensity} 点位，属中等密度。结论：采用 Combo，热点楼层可按需开通 XGS-PON。`,
     )
   } else {
     tech = 'GPON'
-    reasonLines.push('密度与千兆桌面需求适中 → 选用 GPON，成本更优，单 PON 口可覆盖更多 ONU。')
+    reasonLines.push('依据：密度不高且目标为千兆桌面。结论：采用 GPON，单 PON 口可带更多 ONU，成本较低。')
   }
 
   if (input.budget === '成本优先' && tech === 'XGS-PON' && input.bandwidthTier === '千兆桌面' && !hasWirelessDense) {
     tech = 'Combo'
-    reasonLines.push('成本优先且无强制万兆/无线高密 → 从纯 XGS-PON 下调为 Combo，热点按需开通 10G。')
+    reasonLines.push('依据：预算为成本优先，且未强制万兆/无线高密。结论：由 XGS-PON 调整为 Combo。')
   }
 
   let l1 = 8
@@ -118,7 +118,7 @@ export function generatePlan(input: PlannerInput): PlannerResult {
       l1 = 4
       l2 = 16
     }
-    reasonLines.push(`分光偏好「不等比」→ 一级 1:${l1}、二级 1:${l2}，便于按楼层差异化配比。`)
+    reasonLines.push(`依据：分光策略选不等比。结论：一级 1:${l1}、二级 1:${l2}，便于按楼层调整。`)
   } else {
     if (input.budget === '性能优先' || density > 100) {
       l1 = 4
@@ -130,7 +130,7 @@ export function generatePlan(input: PlannerInput): PlannerResult {
       l1 = 8
       l2 = 8
     }
-    reasonLines.push(`分光偏好「等比」且预算「${input.budget}」→ 采用 1:${l1} × 1:${l2}（等效 1:${l1 * l2}）。`)
+    reasonLines.push(`依据：等比分光 + 预算「${input.budget}」。结论：1:${l1} × 1:${l2}（等效 1:${l1 * l2}）。`)
   }
   const effective = l1 * l2
 
@@ -141,19 +141,19 @@ export function generatePlan(input: PlannerInput): PlannerResult {
 
   if (hasSecurity) {
     onuTotal += floors * 2
-    reasonLines.push('含安防业务 → 每层预留约 2 台安防 ONU（摄像/门禁汇聚）。')
+    reasonLines.push('依据：业务含安防。结论：每层按约 2 台 ONU 预留摄像/门禁汇聚。')
   }
   if (hasIot) {
     onuTotal += Math.ceil(floors * 1.5)
-    reasonLines.push('含物联业务 → 每层预留物联汇聚 ONU。')
+    reasonLines.push('依据：业务含物联。结论：每层增加物联汇聚 ONU。')
   }
 
   if (input.budget === '成本优先') {
     apTotal = Math.max(floors, Math.ceil(apTotal * 0.75))
-    reasonLines.push('成本优先 → 光 AP 按合并覆盖估算，减少约 25%。')
+    reasonLines.push('依据：预算成本优先。结论：光 AP 按合并覆盖估算，数量下调约 25%。')
   } else if (input.budget === '性能优先') {
     apTotal = Math.ceil(apTotal * 1.2)
-    reasonLines.push('性能优先 → 光 AP 增加约 20% 以降低同频干扰、提升漫游体验。')
+    reasonLines.push('依据：预算性能优先。结论：光 AP 数量上浮约 20%，用于降低同频干扰。')
   }
 
   const endpoints = onuTotal + apTotal
@@ -167,20 +167,20 @@ export function generatePlan(input: PlannerInput): PlannerResult {
 
   if (input.budget === '性能优先' && oltBase === 1 && ponPortsNeeded > portsPerOlt * 0.6) {
     oltBase = 2
-    reasonLines.push('性能优先且 PON 口占用偏高 → 建议至少 2 台 OLT 分担负载。')
+    reasonLines.push('依据：性能优先且 PON 口占用偏高。结论：建议不少于 2 台 OLT。')
   }
 
   if (input.budget === '成本优先' && oltBase > 1 && ponPortsNeeded <= portsPerOlt) {
     oltBase = 1
-    reasonLines.push('成本优先且 PON 口可单机容纳 → 合并为 1 台 OLT。')
+    reasonLines.push('依据：成本优先，且 PON 口可单机容纳。结论：OLT 按 1 台配置。')
   }
 
   let oltCount = input.dualOlt ? Math.max(2, oltBase * 2) : oltBase
   if (input.dualOlt && oltBase === 1) {
     oltCount = 2
-    reasonLines.push('启用双 OLT 冗余 → 部署 2 台 OLT 做双归属/主备保护。')
+    reasonLines.push('依据：启用双 OLT 冗余。结论：部署 2 台 OLT，做双归属/主备。')
   } else if (input.dualOlt) {
-    reasonLines.push(`启用双 OLT 冗余 → 在业务所需 ${oltBase} 台基础上按 1:1 冗余，共 ${oltCount} 台。`)
+    reasonLines.push(`依据：启用双 OLT 冗余。结论：业务侧 ${oltBase} 台按 1:1 冗余，合计 ${oltCount} 台。`)
   }
 
   const ponPortsProvisioned = oltCount * portsPerOlt
@@ -282,20 +282,21 @@ export function generatePlan(input: PlannerInput): PlannerResult {
   ]
 
   const summary = [
-    `针对 ${floors} 层、每层约 ${pointsPerFloor} 点位、峰值并发 ${peakUsers} 的楼宇，推荐采用「${tech} + 二级分光（1:${l1}×1:${l2}，等效 1:${effective}）」全光架构`,
-    input.dualOlt ? '，并启用双 OLT 冗余保护' : '',
-    `。共需约 ${oltCount} 台 OLT（PON 口需求约 ${ponPortsNeeded}，配置 ${ponPortsProvisioned}）、一级分光 ${l1Count} 台、二级分光 ${l2Count} 台、有线 ONU ${onuTotal} 台、光 AP ${apTotal} 台。`,
-    `业务按 ${slices.map((s) => `${s.name}(VLAN${s.vlanId})`).join('、')} 划分切片，预算策略为「${input.budget}」。`,
+    `楼宇规模：${floors} 层，每层约 ${pointsPerFloor} 点位，峰值并发 ${peakUsers}。`,
+    `推荐架构：${tech} + 二级分光 1:${l1} × 1:${l2}（等效 1:${effective}）`,
+    input.dualOlt ? '，启用 OLT 双归属' : '，OLT 单归属',
+    `。设备估算：OLT ${oltCount} 台（PON 口需求 ${ponPortsNeeded}、配置 ${ponPortsProvisioned}），一级分光 ${l1Count} 台，二级分光 ${l2Count} 台，有线 ONU ${onuTotal} 台，光 AP ${apTotal} 台。`,
+    `切片建议：${slices.map((s) => `${s.name}/VLAN${s.vlanId}`).join('、')}；预算偏好：${input.budget}。`,
   ].join('')
 
   const vsTraditional = [
-    '带宽：主干光纤替代大量铜缆聚合，上联可平滑升至 XGS-PON 万兆，避免传统接入交换机堆叠瓶颈。',
-    '布线与弱电间：无源 ODN 减少有源机房与供电点，水平光缆一次敷设、后期扩容主要换 ONU/开通 PON 口。',
-    '运维：端到端光功率与 ONU 状态可统一网管；故障定界按 OLT→分光→ONU 层级，较三层交换逐跳排障更直观。',
-    '能耗与 TCO：无源分光段近零耗电，有源设备集中在机房 OLT，长期电费与维保通常优于每层堆叠交换。',
+    '带宽：主干以光纤承载，上联可按需升级至 XGS-PON；减少楼层交换机堆叠造成的上联瓶颈。',
+    '布线：ODN 无源，弱电间有源设备更少；水平光缆一次建设后，扩容以增 ONU/开通 PON 口为主。',
+    '运维：可按 OLT→分光器→ONU 分层定界，结合光功率与 ONU 状态统一监控。',
+    '能耗：无源分光段基本不耗电，有源设备集中在机房，利于降低长期电费与维保点。',
     tech !== 'GPON'
-      ? '高密场景：光 AP + XGS/Combo 更易支撑无线高密与万兆上行，而传统「每层交换+铜缆 AP」需频繁扩容上联。'
-      : '中小密度：GPON POL 以更少有源节点达到千兆桌面，较传统三层交换端口密度方案更简洁。',
+      ? '高密场景：光 AP 配合 XGS/Combo，更适合无线高密与较高上行需求。'
+      : '中小密度：GPON POL 有源节点更少，千兆桌面场景下结构更简洁。',
   ]
 
   return {
@@ -331,7 +332,7 @@ export const presets: ScenarioPreset[] = [
   {
     id: 'office18',
     name: '18 层写字楼高密',
-    desc: '开放办公 + 无线高密 + 万兆上行 + 双 OLT',
+    desc: '18 层、高并发、万兆上行、双 OLT',
     input: {
       floors: 18,
       pointsPerFloor: 24,
@@ -346,7 +347,7 @@ export const presets: ScenarioPreset[] = [
   {
     id: 'campus5',
     name: '5 层园区办公',
-    desc: '中小密度、千兆桌面、成本优先',
+    desc: '5 层园区、千兆桌面、成本优先',
     input: {
       floors: 5,
       pointsPerFloor: 16,
@@ -361,7 +362,7 @@ export const presets: ScenarioPreset[] = [
   {
     id: 'hotel',
     name: '酒店客房',
-    desc: '多层客房点位多、安防+访客、均衡冗余',
+    desc: '客房点位多、含安防/访客、双 OLT',
     input: {
       floors: 22,
       pointsPerFloor: 40,

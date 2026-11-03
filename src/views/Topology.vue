@@ -20,7 +20,7 @@ onMounted(() => {
   window.setTimeout(() => { booting.value = false }, 720)
   breathTimer = window.setInterval(() => {
     breath.value = (breath.value + 1) % 1000
-  }, 80)
+  }, 400)
 })
 onUnmounted(() => window.clearInterval(breathTimer))
 
@@ -33,7 +33,7 @@ const statusColor: Record<DeviceStatus, string> = {
 
 const graphOption = computed(() => {
   // breath used to nudge shadow for “呼吸”
-  const b = 12 + Math.sin(breath.value / 8) * 6
+  const b = 8 + Math.sin(breath.value / 8) * 2
   const nodes: Array<Record<string, unknown>> = []
   const links: Array<Record<string, unknown>> = []
   const flowLines: Array<{ coords: number[][] }> = []
@@ -41,10 +41,10 @@ const graphOption = computed(() => {
   const glow = (color: string, size: number, id: string) => {
     const hot = selectedId.value === id
     return {
-      symbolSize: hot ? size * 1.4 : size + Math.sin(breath.value / 10) * 1.2,
+      symbolSize: hot ? size * 1.15 : size,
       itemStyle: {
         color,
-        shadowBlur: hot ? 36 : b,
+        shadowBlur: hot ? 16 : b,
         shadowColor: color,
         borderColor: hot ? '#fff' : 'rgba(255,255,255,0.3)',
         borderWidth: hot ? 2.5 : 1,
@@ -153,11 +153,11 @@ const graphOption = computed(() => {
         zlevel: 2,
         effect: {
           show: true,
-          period: 3.2,
-          trailLength: 0.45,
+          period: 5,
+          trailLength: 0.25,
           symbol: 'circle',
-          symbolSize: 4,
-          color: '#e879f9',
+          symbolSize: 3,
+          color: '#60a5fa',
         },
         lineStyle: { width: 0, opacity: 0, curveness: 0.08 },
         data: flowLines,
@@ -181,16 +181,16 @@ function onClick(params: Record<string, unknown>) {
       <div class="flow-line" style="top: 0" />
       <div class="head">
         <div>
-          <h3 class="pol-title">全光拓扑光场</h3>
-          <div class="pol-sub">节点呼吸发光 · 主干光点流动 · 选中爆闪聚焦（可漫游缩放）</div>
+          <h3 class="pol-title">OLT — ODN — ONU 拓扑</h3>
+          <div class="pol-sub">二级分光示意，可拖拽缩放；点击节点查看详情（ONU 为抽样展示）</div>
         </div>
-        <span class="neon-badge">OPTICAL FABRIC</span>
+        <span class="tag-pill">Combo PON</span>
       </div>
       <div class="chart-box">
         <transition name="page-fade">
           <div v-if="booting" class="skeleton" key="sk">
             <div class="sk-core" />
-            <div class="pol-sub">光路编织中 · Optical Fabric Booting…</div>
+            <div class="pol-sub">正在加载拓扑数据…</div>
             <div class="sk-bars">
               <div class="skeleton-block" style="height: 10px; width: 60%" />
               <div class="skeleton-block" style="height: 10px; width: 40%" />
@@ -201,25 +201,25 @@ function onClick(params: Record<string, unknown>) {
       </div>
     </div>
     <aside class="pol-panel detail" :class="{ flash: !!selected }">
-      <h3 class="pol-title">节点情报</h3>
+      <h3 class="pol-title">节点详情</h3>
       <template v-if="selected">
-        <div class="neon-badge" style="margin-bottom: 10px; width: fit-content">LOCKED · 光路锁定</div>
+        <div class="tag-pill" style="margin-bottom: 10px; width: fit-content">已选中</div>
         <el-descriptions :column="1" size="small" border>
           <el-descriptions-item v-for="(v, k) in selected" :key="String(k)" :label="String(k)">
             {{ Array.isArray(v) ? v.join('、') : v }}
           </el-descriptions-item>
         </el-descriptions>
       </template>
-      <div v-else class="empty-art">
-        <div class="empty-orb" />
-        <div class="pol-sub">点选任意发光节点，展开型号 / 分光比 / 光功率</div>
+      <div v-else class="empty-state">
+        <div class="icon">i</div>
+        <div class="pol-sub">请选择拓扑中的节点，查看型号、分光比或光功率</div>
       </div>
       <div class="legend-box">
         <div class="pol-title" style="margin-bottom: 8px">图例</div>
-        <div><span class="status-dot status-online" />在线呼吸</div>
-        <div><span class="status-dot status-warning" />告警闪烁</div>
+        <div><span class="status-dot status-online" />在线</div>
+        <div><span class="status-dot status-warning" />告警</div>
         <div><span class="status-dot status-offline" />离线</div>
-        <div class="pol-sub" style="margin-top: 8px">品红光点 = 主干链路流量示意</div>
+        <div class="pol-sub" style="margin-top: 8px">蓝色光点表示主干链路方向示意</div>
       </div>
     </aside>
   </div>
@@ -248,14 +248,13 @@ function onClick(params: Record<string, unknown>) {
 .sk-bars { width: min(320px, 70%); display: grid; gap: 8px; }
 .detail { display: flex; flex-direction: column; gap: 12px; }
 .detail.flash {
-  animation: select-flash 0.7s ease;
-  border-color: rgba(232, 121, 249, 0.65);
-  box-shadow: 0 0 34px rgba(232, 121, 249, 0.35);
+  animation: select-flash 0.45s ease;
+  border-color: rgba(59, 130, 246, 0.55);
 }
 @keyframes select-flash {
-  0% { box-shadow: 0 0 0 rgba(232,121,249,0); }
-  40% { box-shadow: 0 0 40px rgba(232,121,249,0.65); }
-  100% { box-shadow: 0 0 24px rgba(232,121,249,0.3); }
+  0% { border-color: rgba(59,130,246,0.3); }
+  50% { border-color: rgba(59,130,246,0.8); }
+  100% { border-color: rgba(59,130,246,0.55); }
 }
 .legend-box {
   margin-top: auto; padding-top: 12px;
