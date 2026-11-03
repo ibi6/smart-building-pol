@@ -1,0 +1,85 @@
+:root {
+  color-scheme: dark;
+  --pol-bg: #070b16;
+  --pol-panel: rgba(16, 28, 52, 0.88);
+  --pol-border: rgba(64, 158, 255, 0.28);
+  --pol-accent: #3aa0ff;
+  --pol-accent-2: #19e6c2;
+  --pol-text: #e8f1ff;
+  --pol-muted: #8fa3c2;
+  --pol-danger: #ff5c7a;
+  --pol-warn: #ffb020;
+  --pol-ok: #2ce6a4;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--pol-text);
+  background: var(--pol-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html, body, #app {
+  margin: 0;
+  min-height: 100%;
+  background: var(--pol-bg);
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(58, 160, 255, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(25, 230, 194, 0.12), transparent 50%),
+    linear-gradient(180deg, #0a1224 0%, #070b16 100%);
+}
+
+a { color: inherit; text-decoration: none; }
+
+.pol-panel {
+  background: var(--pol-panel);
+  border: 1px solid var(--pol-border);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+.pol-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pol-sub {
+  color: var(--pol-muted);
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+.status-online { background: var(--pol-ok); box-shadow: 0 0 8px var(--pol-ok); }
+.status-offline { background: #6b778c; }
+.status-warning { background: var(--pol-warn); box-shadow: 0 0 8px var(--pol-warn); }
+.status-maintenance { background: var(--pol-accent); }
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(20, 40, 72, 0.9);
+  --el-table-row-hover-bg-color: rgba(58, 160, 255, 0.08);
+  --el-table-border-color: rgba(64, 158, 255, 0.15);
+  --el-table-text-color: var(--pol-text);
+  --el-table-header-text-color: var(--pol-muted);
+}
+
+.el-card {
+  --el-card-bg-color: transparent;
+  border: none;
+  background: transparent;
+}
