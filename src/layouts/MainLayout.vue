@@ -8,6 +8,7 @@ import {
   DataAnalysis,
   Grid,
   Bell,
+  SetUp,
 } from '@element-plus/icons-vue'
 import { building, overviewStats } from '@/mock/data'
 
@@ -21,6 +22,7 @@ const menus = [
   { path: '/density', title: '高密度接入', icon: DataAnalysis },
   { path: '/business', title: '业务分区', icon: Grid },
   { path: '/alarms', title: '告警与运维', icon: Bell },
+  { path: '/planner', title: '方案测算', icon: SetUp },
 ]
 
 const active = computed(() => route.path)

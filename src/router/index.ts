@@ -14,6 +14,7 @@ const router = createRouter({
         { path: 'density', name: 'density', meta: { title: '高密度接入' }, component: () => import('@/views/Density.vue') },
         { path: 'business', name: 'business', meta: { title: '业务分区' }, component: () => import('@/views/Business.vue') },
         { path: 'alarms', name: 'alarms', meta: { title: '告警与运维' }, component: () => import('@/views/Alarms.vue') },
+        { path: 'planner', name: 'planner', meta: { title: '方案测算' }, component: () => import('@/views/Planner.vue') },
       ],
     },
   ],
